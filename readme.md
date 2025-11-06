@@ -88,4 +88,4 @@ python attack_high_dim.py \
 4. Explore configurations with custom parameters (2D or high-dim)
 
 ## Citations and License
-If you use this code, please cite appropriately. Licensing details can be added here.
+If you use this code, please cite appropriately. 
