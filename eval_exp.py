@@ -17,6 +17,8 @@ if __name__ == "__main__":
                         help='percentage of queries')
     parser.add_argument('-dist', type=str, default="uniform",
                         help='beta, gaussian, uniform')
+    parser.add_argument('-sparsity', type=float, default=1,
+                        help='percentage of sparsity in the data, can only used fror ')
     parser.add_argument('-N0', type=int, default=30,
                         help='N0')
     parser.add_argument('-N1', type=int, default=30,
@@ -27,7 +29,7 @@ if __name__ == "__main__":
     N0 = args.N0
     N1 = args.N1
     N2 = N0
-    points, map_to_original = parse_data.extract_data(args.points, args.N0, args.N1)
+    points, map_to_original = parse_data.extract_data(args.points, args.N0, args.N1, args.sparsity)
 
     # Extract (i, j) coordinates
     coordinates = list(map_to_original.values())

@@ -1455,13 +1455,13 @@ def plot_original_data(coordinates):
     plt.show()
 
 
-def extract_data(points_type, N0, N1):
+def extract_data(points_type, N0, N1, sparsity=0):
     global cali_all
     global highway_30
     global busstop_30
     if points_type == "grid":
         # 随机获取一些点组成数据库
-        points, map_to_original = process_database.get_random_database(N0, N1, 1)
+        points, map_to_original = process_database.get_random_database(N0, N1, 1, sparsity)
         return points, map_to_original
     elif points_type == "grid_3d":
         points, map_to_original = process_database.get_random_database_3D(N0, N1, N1, 1)

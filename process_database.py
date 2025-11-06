@@ -147,12 +147,12 @@ def get_random_database_with_outlier(N0, N1, max_points, plaintext=False):
     return points, map_to_original
 
 
-def get_random_database(N0, N1, max_points, plaintext=False):
+def get_random_database(N0, N1, max_points, sparsity=0, plaintext=False):
     map_to_original = {}
     points = []
     for i in range(1, N0):
         for j in range(1, N1):
-            if random.randrange(100) < 10:
+            if random.randrange(100) < sparsity:
                 continue
             repeats = int(1 + (max_points - 1) * random.random())
             for num in range(repeats):

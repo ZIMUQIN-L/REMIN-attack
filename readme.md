@@ -38,7 +38,8 @@ python eval_exp.py \
   -p 1 \
   -dist uniform \
   -N0 20 \
-  -N1 20
+  -N1 20 \
+  -sparsity 10
 ```
 
 ### Arguments
@@ -46,7 +47,7 @@ python eval_exp.py \
 - **-p**: percentage of responses to sample (1–100). Controls data sparsity.
 - **-dist**: sampling distribution for responses; one of `beta`, `gaussian`, `uniform`.
 - **-N0, -N1**: grid dimensions or dataset shape hints used by loaders/evaluators, usually 50*50 for real world dataset
-
+- **-sparsity**: sparsity level for synthetic grid dataset (higher means sparser).
 Notes:
 - The script plots results and prints correspondence metrics.
 
