@@ -88,5 +88,13 @@ python attack_high_dim.py \
 3. Run a minimal test: `python eval_exp.py`
 4. Explore configurations with custom parameters (2D or high-dim)
 
+## Possible Issues
+1. TypeError: TSNE.__init__() got an unexpected keyword argument 'square_distances'
+> This error occurs when using newer versions of scikit-learn, as the parameter square_distances has been removed.
+To fix this, you can:
+> Downgrade scikit-learn to version 0.24.2.
+2. Python Version Compatibility
+> The code has been tested with Python 3.8. Using newer versions (e.g., Python 3.12 or 3.13) may cause dependency conflicts or unexpected behavior. It is recommended to create a virtual environment with Python 3.8 and install dependencies via pip install -r requirements.txt.
+
 ## Citations and License
 If you use this code, please cite appropriately. 
