@@ -3,7 +3,7 @@
 This project investigate approximate database reconstruction from range-response data. It includes a 2D pipeline using REMIN, as well as a high-dimensional attack pipeline.  schematic illustration of the REMIN reconstruction attack is shown in the figure below.
 ![](basic-attack-3.png)
 ### Environment
-- **Python**: 3.8+
+- **Python**: 3.8
 - **Install deps** (recommended in a virtual environment)
 
 ```bash
