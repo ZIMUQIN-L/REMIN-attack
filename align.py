@@ -21,7 +21,7 @@ def scale_coords(coords, x_range, y_range):
     x_min, x_max = np.min(coords[:, 0]), np.max(coords[:, 0])
     y_min, y_max = np.min(coords[:, 1]), np.max(coords[:, 1])
 
-    # 线性缩放
+    # linear scaling
     scaled_x = (coords[:, 0] - x_min) / (x_max - x_min) * (x_range[1] - x_range[0]) + x_range[0]
     scaled_y = (coords[:, 1] - y_min) / (y_max - y_min) * (y_range[1] - y_range[0]) + y_range[0]
     return np.column_stack([scaled_x, scaled_y])
@@ -40,13 +40,13 @@ def original_align_to_grid(coords, grid_shape):
 
 def robust_scale_coords(coords, x_range, y_range):
     scaler = RobustScaler(
-        quantile_range=(25, 75),  # 使用25%-75%分位数范围
+        quantile_range=(25, 75),  # utilize 20% - 75% percentage for scaling
         with_centering=True,
         with_scaling=True
     )
     scaled = scaler.fit_transform(coords)
 
-    # 映射到目标范围
+    # mapping to target range
     scaled[:, 0] = (scaled[:, 0] - scaled[:, 0].min()) / (scaled[:, 0].max() - scaled[:, 0].min()) * (
                 x_range[1] - x_range[0]) + x_range[0]
     scaled[:, 1] = (scaled[:, 1] - scaled[:, 1].min()) / (scaled[:, 1].max() - scaled[:, 1].min()) * (

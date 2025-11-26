@@ -1460,7 +1460,7 @@ def extract_data(points_type, N0, N1, sparsity=0):
     global highway_30
     global busstop_30
     if points_type == "grid":
-        # 随机获取一些点组成数据库
+        # get some random points to construct a db
         points, map_to_original = process_database.get_random_database(N0, N1, 1, sparsity)
         return points, map_to_original
     elif points_type == "grid_3d":

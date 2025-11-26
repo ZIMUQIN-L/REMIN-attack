@@ -14,40 +14,41 @@ from scipy.spatial import KDTree
 
 def procrustes_with_scale(A, B):
     """
-    Procrustes 对齐（带缩放）
+    Procrustes alignment(with scaling)
     Args:
-        A: 源点集 (n, m)
-        B: 目标点集 (n, m)
+        A: original data points (n, m)
+        B: target data points (n, m)
     Returns:
-        A_aligned: 对齐后的A
-        scale: 缩放因子
-        R: 旋转矩阵
+        A_aligned: A after alignment
+        scale: scaling factor
+        R: rotate matrix
     """
-    # 1. 中心化（如果尚未中心化）
+    # 1. centralized (if not centralized)
     A_centered = A - np.mean(A, axis=0)
     B_centered = B - np.mean(B, axis=0)
 
-    # 2. 计算缩放因子（最小二乘优化）
+    # 2. compute the scaling factor (Least squares optimization)
     scale = np.trace(B_centered.T @ A_centered) / np.trace(A_centered.T @ A_centered)
 
-    # 3. 计算旋转矩阵（SVD，不包含缩放）
+    # 3. compute rotate matrix（SVD, without scaling）
     R, _ = orthogonal_procrustes(A_centered, B_centered)
 
-    # 4. 应用变换：缩放 -> 旋转 -> 平移
+    # 4. apply the transformation: scaling -> rotate -> translation
     A_aligned = scale * A_centered @ R + np.mean(B, axis=0)
 
     return A_aligned, scale, R
 
+
 class CorrespondMetrics:
     def __init__(self, map_to_original, point_to_index, N0, N1):
         """
-        初始化评估器
-        参数:
-            - map_to_original: 从点映射到原始坐标的字典
-            - point_to_index: 从点映射到索引的字典
+        Initialize evaluator
+        Parameters:
+            - map_to_original: Dictionary mapping points to original coordinates
+            - point_to_index: Dictionary mapping points to indices
         """
-        # 从map_to_original和point_to_index中提取原始坐标
-        # 首先创建一个临时字典，将索引映射到坐标
+        # Extract original coordinates from map_to_original and point_to_index
+        # First create a temporary dictionary mapping indices to coordinates
         self.N0 = N0
         self.N1 = N1
         index_to_coords = {}
@@ -61,20 +62,20 @@ class CorrespondMetrics:
         x_min, x_max = np.min(coords[:, 0]), np.max(coords[:, 0])
         y_min, y_max = np.min(coords[:, 1]), np.max(coords[:, 1])
 
-        # 线性缩放
+        # linear scaling
         scaled_x = (coords[:, 0] - x_min) / (x_max - x_min) * (x_range[1] - x_range[0]) + x_range[0]
         scaled_y = (coords[:, 1] - y_min) / (y_max - y_min) * (y_range[1] - y_range[0]) + y_range[0]
         return np.column_stack([scaled_x, scaled_y])
 
     def robust_scale_coords(self, coords, x_range, y_range):
         scaler = RobustScaler(
-            quantile_range=(25, 75),  # 使用25%-75%分位数范围
+            quantile_range=(25, 75),
             with_centering=True,
             with_scaling=True
         )
         scaled = scaler.fit_transform(coords)
 
-        # 映射到目标范围
+        # Map to target range
         scaled[:, 0] = (scaled[:, 0] - scaled[:, 0].min()) / (scaled[:, 0].max() - scaled[:, 0].min()) * (
                 x_range[1] - x_range[0]) + x_range[0]
         scaled[:, 1] = (scaled[:, 1] - scaled[:, 1].min()) / (scaled[:, 1].max() - scaled[:, 1].min()) * (
@@ -83,58 +84,25 @@ class CorrespondMetrics:
         return scaled
 
     def visualize_alignment(self, reconstructed_coords, reconstructed_aligned):
-        """
-        可视化原始坐标、重建坐标和对齐后的坐标
-        参数:
-            - reconstructed_coords: (n, 2) 重建坐标（对齐前）
-            - reconstructed_aligned: (n, 2) 对齐后的坐标
-        """
-        # 创建图形
-        # plt.figure(figsize=(15, 5), dpi=300)
-        #
-        # # 绘制原始坐标
-        # plt.subplot(131)
-        # plt.scatter(self.original_coords[:, 0], self.original_coords[:, 1], c='blue', label='Original')
-        # plt.title('Original Coordinates')
-        # plt.legend()
-        #
-        # # 绘制重建坐标（对齐前）
-        # plt.subplot(132)
-        # plt.scatter(reconstructed_coords[:, 0], reconstructed_coords[:, 1], c='red', label='Reconstructed')
-        # plt.title('Reconstructed Coordinates (Before Alignment)')
-        # plt.legend()
-        #
-        # # 绘制对齐后的坐标
-        # plt.subplot(133)
-        # plt.scatter(self.original_coords[:, 0], self.original_coords[:, 1], c='blue', label='Original', alpha=0.3)
-        # plt.scatter(reconstructed_aligned[:, 0], reconstructed_aligned[:, 1], c='orange', label='Reconstructed', alpha=0.8)
-        # plt.title('After Procrustes Alignment')
-        # plt.legend()
-        #
-        # plt.tight_layout()
-        # plt.show()
+        plt.rcParams.update({'font.size': 3})  # set font size
+        point_size = 2  # size point size
 
-        # 设置全局字体大小和点的大小
-        plt.rcParams.update({'font.size': 3})  # 设置字体大小
-        point_size = 2  # 设置点的大小，适当调整
-
-        # 创建图形，figsize适当缩小
         plt.figure(figsize=(12, 5), dpi=300)
 
-        # 绘制原始坐标
+        # original data points
         plt.subplot(131)
         plt.scatter(self.original_coords[:, 0], self.original_coords[:, 1], c='blue', label='Original', s=point_size)
         plt.title('Original Coordinates')
         plt.legend()
 
-        # 绘制重建坐标（对齐前）
+        # reconstruction data points (before alignment)
         plt.subplot(132)
         plt.scatter(reconstructed_coords[:, 0], reconstructed_coords[:, 1], c='red', label='Reconstructed',
                     s=point_size)
         plt.title('Reconstructed Coordinates (Before Alignment)')
         plt.legend()
 
-        # 绘制对齐后的坐标
+        # reconstruction data points (after alignment)
         plt.subplot(133)
         plt.scatter(self.original_coords[:, 0], self.original_coords[:, 1], c='blue', label='Original', alpha=0.3,
                     s=point_size)
@@ -147,8 +115,8 @@ class CorrespondMetrics:
         plt.show()
 
     def snap_to_integer(self, coords):
-        """将坐标对齐到最近的整数"""
-        # 计算整体偏移量（使坐标分布更均匀）
+        """Align coordinates to the nearest integer"""
+        # Calculate overall offset (to distribute coordinates more evenly)
         offsets = coords - np.round(coords)
         median_offset = np.median(offsets, axis=0)
 
@@ -158,11 +126,11 @@ class CorrespondMetrics:
         original_center = np.mean(self.original_coords, axis=0)
         reconstructed_center = np.mean(reconstructed_coords, axis=0)
 
-        # 将两个点集都平移到原点
+        # Translate both sets of points to the origin
         original_centered = self.original_coords - original_center
         reconstructed_centered = reconstructed_coords - reconstructed_center
 
-        # # 使用Procrustes分析只进行旋转对齐
+        # Use Procrustes analysis for rotational alignment only
         _, reconstructed_aligned, _ = procrustes(original_centered, reconstructed_centered)
 
         reconstructed_aligned = self.robust_scale_coords(reconstructed_aligned, [1, self.N0 - 1], [1, self.N1 - 1])
@@ -170,36 +138,36 @@ class CorrespondMetrics:
 
     def evaluate(self, reconstructed_coords, align=True):
         """
-        评估重建效果
-        参数:
-            - reconstructed_coords: (n, 2) 重建坐标
-        返回:
-            - metrics: 包含各项指标的字典
+        Evaluate Reconstruction Effect
+        Parameters:
+        - reconstructed_coords: (n, 2) Reconstructed coordinates
+        Returns:
+        - metrics: Dictionary containing various metrics
         """
         if align:
-        # 计算原始坐标和重建坐标的中心
+        # Calculate the center of the original coordinates and reconstructed coordinates
             original_center = np.mean(self.original_coords, axis=0)
             reconstructed_center = np.mean(reconstructed_coords, axis=0)
 
-            # 将两个点集都平移到原点
+            # Translate both sets of points to the origin
             original_centered = self.original_coords - original_center
             reconstructed_centered = reconstructed_coords - reconstructed_center
 
 
-            # # 使用Procrustes分析只进行旋转对齐
+            # Use Procrustes analysis for rotational alignment only
             _, reconstructed_aligned, _ = procrustes(original_centered, reconstructed_centered)
 
             reconstructed_aligned = self.robust_scale_coords(reconstructed_aligned, [1, self.N0 - 1], [1, self.N1 - 1])
             # reconstructed_aligned = self.snap_to_integer(reconstructed_aligned)
 
-            # 可视化对齐结果
+            # visualization
             self.visualize_alignment(reconstructed_coords, reconstructed_aligned)
         else:
             reconstructed_aligned = reconstructed_coords
             reconstructed_aligned = self.robust_scale_coords(reconstructed_aligned, [0, self.N0], [0, self.N1])
             self.visualize_alignment(self.original_coords, reconstructed_aligned)
 
-        # 计算各项指标
+        # metrics computation
         metrics = {
             'mse': self._calc_mse(reconstructed_aligned),
             'exact_match': self.tolerant_match_rate(reconstructed_aligned),
@@ -218,25 +186,24 @@ class CorrespondMetrics:
 
     def tolerant_match_rate(self, reconstructed, radius=2):
         """
-        计算松弛匹配率：重建点是否在原始点的邻域内
+        Calculate relaxation matching rate: Whether reconstructed points fall within the neighborhood of original points
         Args:
-            reconstructed: (n, 2) 重建坐标
-            radius: 匹配阈值
+            reconstructed: (n, 2) Reconstructed coordinates
+            radius: Matching threshold
         Returns:
-            match_rate: 匹配比例
+            match_rate: Matching ratio
         """
         if len(self.original_coords) == 0 or len(reconstructed) == 0:
             return 0.0
 
-        # 直接计算对应点之间的距离
+        # Directly calculate the distance between corresponding points
         distances = np.square(np.linalg.norm(self.original_coords - reconstructed, axis=1))
         matched = np.sum(distances <= radius)
 
         return matched / len(reconstructed)
 
     def _mse_with_correspondence(self, reconstructed, reconstructed_to_original):
-        """使用点对应关系计算MSE"""
-        # 使用点对应关系计算MSE
+        """Calculate MSE Using Point Correspondence"""
         mse = 0
         for i in range(len(self.original_coords)):
             reconstructed_idx = reconstructed_to_original[i]
@@ -244,8 +211,7 @@ class CorrespondMetrics:
         return mse / len(self.original_coords)
 
     def _exact_match_with_correspondence(self, reconstructed, reconstructed_to_original):
-        """使用点对应关系计算完全匹配率"""
-        # 使用点对应关系计算完全匹配率
+        # Calculate the exact match rate using the point correspondence relationship
         exact_matches = 0
         for i in range(len(self.original_coords)):
             reconstructed_idx = reconstructed_to_original[i]
@@ -255,13 +221,11 @@ class CorrespondMetrics:
 
     def _visualize_neighbors(self, reconstructed, reconstructed_to_original, indices_original, indices_reconstructed,
                              k=5):
-        """可视化原始点和重建点的最近邻关系"""
+        """Visualizing the Nearest Neighbor Relationships Between Original Points and Reconstructed Points"""
         plt.figure(figsize=(12, 6))
 
-        # 绘制原始点
         plt.subplot(121)
         plt.scatter(self.original_coords[:, 0], self.original_coords[:, 1], c='blue', label='Original')
-        # 绘制原始点的最近邻关系
         for i in range(len(self.original_coords)):
             neighbors = indices_original[i]
             for j in neighbors:
@@ -271,10 +235,8 @@ class CorrespondMetrics:
         plt.title('Original Points and Neighbors')
         plt.legend()
 
-        # 绘制重建点
         plt.subplot(122)
         plt.scatter(reconstructed[:, 0], reconstructed[:, 1], c='red', label='Reconstructed')
-        # 绘制重建点的最近邻关系
         for i in range(len(reconstructed)):
             neighbors = indices_reconstructed[i]
             for j in neighbors:
@@ -288,37 +250,32 @@ class CorrespondMetrics:
         plt.show()
 
     def _calc_neighbor_accuracy_nearest(self, reconstructed, reconstructed_to_original, k=5):
-        """使用最近邻匹配计算最近邻准确率"""
-        # 确保输入数据有效
+        """Calculate the nearest neighbor accuracy using nearest neighbor matching."""
         if len(reconstructed) == 0 or len(self.original_coords) == 0:
             return 0.0
 
-        # 计算最近邻
+        # compute nearest neighbor
         nn_original = NearestNeighbors(n_neighbors=min(k, len(self.original_coords))).fit(self.original_coords)
         indices_original = nn_original.kneighbors(return_distance=False)
 
         nn_reconstructed = NearestNeighbors(n_neighbors=min(k, len(reconstructed))).fit(reconstructed)
         indices_reconstructed = nn_reconstructed.kneighbors(return_distance=False)
 
-        # 可视化最近邻关系
-        # self._visualize_neighbors(reconstructed, reconstructed_to_original, indices_original, indices_reconstructed, k)
-
-        # 确保k值不超过点集大小
+        # make sure k is smaller than the dataset size
         k = min(k, len(self.original_coords), len(reconstructed))
 
         overlap = 0
         for i in range(len(self.original_coords)):
-            # 获取原始点i的最近邻
+            # get the nearest neighbor for i
             original_neighbors = indices_original[i]
-            # 获取对应的重建点
+            # get the corresponding reconstruction point
             reconstructed_idx = reconstructed_to_original[i]
-            # 获取重建点的最近邻
             reconstructed_neighbors = indices_reconstructed[reconstructed_idx]
 
-            # 将重建点的最近邻映射回原始点的索引
+            # Map the nearest neighbor of the reconstruction point back to the index of the original point.
             mapped_reconstructed_neighbors = [reconstructed_to_original[j] for j in reconstructed_neighbors]
 
-            # 计算重叠
+            # compute overlap
             overlap += len(np.intersect1d(original_neighbors, mapped_reconstructed_neighbors))
 
         return overlap / (k * len(self.original_coords))

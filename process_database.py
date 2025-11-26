@@ -27,7 +27,6 @@ def scale_points(points, N0, N1):
 
 def make_database_from_points(points):
     """
-    给所有点一个标识符
     give each points an identifier
     :param points:
     :return:
@@ -73,11 +72,11 @@ def get_class_database(N0, N1, max_points, plaintext=False):
     map_to_original = {}
     points = []
 
-    # 定义左上角和右下角的范围
-    top_left_range = (0, N0 // 2, 0, N1 // 2)  # 左上角范围
-    bottom_right_range = (N0 // 2, N0, N1 // 2, N1)  # 右下角范围
+    # define left and right corner range
+    top_left_range = (0, N0 // 2, 0, N1 // 2)
+    bottom_right_range = (N0 // 2, N0, N1 // 2, N1)
 
-    # 生成左上角的点
+    # generate left-top points
     for i in range(top_left_range[0], top_left_range[1]):
         for j in range(top_left_range[2], top_left_range[3]):
             if random.randrange(100) < 30:
@@ -91,7 +90,7 @@ def get_class_database(N0, N1, max_points, plaintext=False):
                 map_to_original[search_token] = (i, j)
                 points.append(search_token)
 
-    # 生成右下角的点
+    # generate right-bottom points
     for i in range(bottom_right_range[0], bottom_right_range[1]):
         for j in range(bottom_right_range[2], bottom_right_range[3]):
             if random.randrange(100) < 30:
@@ -112,12 +111,12 @@ def get_random_database_with_outlier(N0, N1, max_points, plaintext=False):
     map_to_original = {}
     points = []
 
-    # 生成主要点集（集中在某个区域，比如中间）
-    main_range = (N0 // 4, 3 * N0 // 4, N1 // 4, 3 * N1 // 4)  # 主要点集的范围
+    # Generate main point set (concentrated in a certain area, e.g., center)
+    main_range = (N0 // 4, 3 * N0 // 4, N1 // 4, 3 * N1 // 4)  # Range of main point set
 
     for i in range(main_range[0], main_range[1]):
         for j in range(main_range[2], main_range[3]):
-            if random.randrange(100) < 20:  # 30% 的概率跳过
+            if random.randrange(100) < 20:  # x% probability to skip
                 continue
             repeats = int(1 + (max_points - 1) * random.random())
             for num in range(repeats):
@@ -128,8 +127,8 @@ def get_random_database_with_outlier(N0, N1, max_points, plaintext=False):
                 map_to_original[search_token] = (i, j)
                 points.append(search_token)
 
-    # 添加一个离群点（远离主要点集）
-    outlier_i = random.choice([0, N0 - 1])  # 离群点在左上角或右下角
+    # Add an outlier point (far from main point set)
+    outlier_i = random.choice([0, N0 - 1])  # Outlier at top-left or bottom-right corner
     outlier_j = random.choice([0, N1 - 1])
     if plaintext:
         outlier_token = (outlier_i, outlier_j)
@@ -183,26 +182,26 @@ def get_random_database_3D(N0, N1, N2, max_points):
 
 def get_random_database_nd(N, dim, max_points):
     """
-    生成一个任意维度的随机数据库
+    Generate a random database with arbitrary dimensions
 
-    参数:
-        N: 每个维度的长度（所有维度相同）
-        dim: 维度数量
-        max_points: 每个坐标点最多生成的搜索令牌数
+    Parameters:
+        N: Length of each dimension (all dimensions same)
+        dim: Number of dimensions
+        max_points: Maximum number of search tokens generated per coordinate point
 
-    返回:
-        points: 搜索令牌列表
-        map_to_original: 从搜索令牌到原始坐标的字典
+    Returns:
+        points: List of search tokens
+        map_to_original: Dictionary mapping search tokens to original coordinates
     """
     map_to_original = {}
     points = []
 
-    # 生成各维度的范围 (从1到N-1)
+    # Generate ranges for each dimension (from 1 to N-1)
     ranges = [range(1, N) for _ in range(dim)]
 
-    # 遍历所有可能的坐标组合
+    # Iterate through all possible coordinate combinations
     for coords in product(*ranges):
-        # 为每个坐标点生成随机数量的搜索令牌
+        # Generate random number of search tokens for each coordinate point
         if random.randrange(100) < 40:
             continue
         repeats = int(1 + (max_points - 1) * random.random())
@@ -216,18 +215,18 @@ def get_random_database_nd(N, dim, max_points):
 
 def get_responses_no_vals_nd(points, coord_map, Ns, dim):
     """
-    Ns: list[int]，每个维度的最大值（不含）
-    dim: int，维度数量
-    返回：所有合法的 (min_0, max_0, ..., min_{d-1}, max_{d-1}) 区间组合
+    Ns: list[int], maximum value for each dimension (exclusive)
+    dim: int, number of dimensions
+    Returns: All valid (min_0, max_0, ..., min_{d-1}, max_{d-1}) range combinations
     """
 
-    # 构造每个维度的 (min_i, max_i) 组合
+    # Construct (min_i, max_i) combinations for each dimension
     all_ranges = []
     for i in range(dim):
         ranges_i = [(min_i, max_i) for min_i in range(1, Ns) for max_i in range(min_i, Ns)]
         all_ranges.append(ranges_i)
 
-    # 笛卡尔积组合每个维度的区间
+    # Cartesian product combining intervals from each dimension
     resps = []
     for combo in tqdm.tqdm(itertools.product(*all_ranges)):
         # combo 是 ((min0, max0), (min1, max1), ...)
@@ -241,35 +240,35 @@ def get_responses_no_vals_nd(points, coord_map, Ns, dim):
 
 def get_actual_query_resps_after_sampling_nd(resps, points, map_points_to_coordinates):
     """
-    计算每个查询范围实际匹配的点（多维版本）
+    Calculate actual matching points for each query range (multi-dimensional version)
 
-    参数:
-        resps: 查询范围列表，格式 [(min0, max0, min1, max1, ...), ...]
-        points: 所有搜索令牌列表
-        map_points_to_coordinates: 令牌到坐标的映射
+    Parameters:
+        resps: List of query ranges, format [(min0, max0, min1, max1, ...), ...]
+        points: List of all search tokens
+        map_points_to_coordinates: Mapping from tokens to coordinates
 
-    返回:
-        actual: 每个查询范围对应的点集合列表 [set(), set(), ...]
-        unique_rs: 所有满足至少一个查询的点的坐标（去重）
+    Returns:
+        actual: List of point sets corresponding to each query range [set(), set(), ...]
+        unique_rs: Coordinates of all points satisfying at least one query (deduplicated)
     """
     actual = []
     unique_rs = set()
     seen_ranges = set()
 
-    # 遍历所有查询范围
+    # Iterate through all query ranges
     for bounds in tqdm.tqdm(resps):
-        # 检查范围是否已处理过（去重）
+        # Check if range has been processed before (deduplication)
         current_range = tuple(bounds)
         if current_range in seen_ranges:
             continue
         seen_ranges.add(current_range)
 
-        # 解析 min_i 和 max_i
+        # Parse min_i and max_i
         dim = len(bounds) // 2
         min_bounds = bounds[::2]  # (min0, min1, ..., min_k)
         max_bounds = bounds[1::2]  # (max0, max1, ..., max_k)
 
-        # 收集当前范围内的点
+        # Collect points within current range
         matched_points = set()
         for p in points:
             coords = map_points_to_coordinates[p]
@@ -280,7 +279,7 @@ def get_actual_query_resps_after_sampling_nd(resps, points, map_points_to_coordi
                     break
             if in_range:
                 matched_points.add(p)
-                unique_rs.add(coords)  # 记录坐标（自动去重）
+                unique_rs.add(coords)  # Record coordinates (automatically deduplicated)
 
         actual.append(matched_points)
 
@@ -288,7 +287,7 @@ def get_actual_query_resps_after_sampling_nd(resps, points, map_points_to_coordi
 
 
 def get_responses(points, map_points_to_coordinates, N0, N1):
-    # 循环获取所有的response set
+    # Loop to get all response sets
     resps = []
     for min0 in tqdm.tqdm(range(1, N0)):
         for min1 in range(1, N1):
@@ -465,18 +464,18 @@ def generate_bogus_pool(
     M: int
 ) -> Tuple[List[str], Dict[str, Tuple[int, int]]]:
     """
-    生成一个 bogus 池：
-    - 坐标从真实分布中采样
-    - fake_token 命名为 'fake_<k>'
-    返回:
-      bogus_points : List[str]  —— fake token 列表
-      bogus_map    : Dict[str, (x,y)] —— fake token -> 坐标
+    Generate a bogus pool:
+    - Coordinates sampled from real distribution
+    - fake_token named as 'fake_<k>'
+    Returns:
+      bogus_points : List[str]  —— fake token list
+      bogus_map    : Dict[str, (x,y)] —— fake token -> coordinates
     """
     real_coords = list(map_to_original.values())
     bogus_points, bogus_map = [], {}
     for k in range(M):
-        coord = random.choice(real_coords)      # 从真实分布采样
-        fake_token = k + 10000000               # 唯一 ID
+        coord = random.choice(real_coords)      # Sample from real distribution
+        fake_token = k + 10000000               # Unique ID
         bogus_points.append(fake_token)
         bogus_map[fake_token] = coord
     return bogus_points, bogus_map
@@ -490,13 +489,13 @@ def pad_results_to_power_of_x(
     bogus_map: Dict[str, Tuple[float,float]]
 ) -> Tuple[List[Set], Dict[str, Tuple[float,float]], Dict]:
     """
-    对每个查询结果集合做 padding:
-    - target size = 最近的 x 的幂 (如果 len(res)==0 则不 pad)
-    - 只从 bogus_map 中坐标落在该 query range 的假点中选（优先）
-    - 允许同一个 fake token 在不同 query 之间重复使用（跨 query 可复用）
-    返回:
+    Pad each query result set:
+    - target size = nearest power of x (if len(res)==0 then don't pad)
+    - Only select from fake points in bogus_map whose coordinates fall within query range (priority)
+    - Allow same fake token to be reused across different queries
+    Returns:
       padded_results, used_bogus_map, metrics_dict
-    metrics_dict 包含 avg_true_size, avg_padded_size, bandwidth_ratio, total_fake_inserted, index_size_overhead, per_query_stats
+    metrics_dict contains avg_true_size, avg_padded_size, bandwidth_ratio, total_fake_inserted, index_size_overhead, per_query_stats
     """
     padded_results: List[Set] = []
     used_bogus: Dict[str, Tuple[float,float]] = {}
@@ -519,7 +518,7 @@ def pad_results_to_power_of_x(
             padded_sizes.append(0)
             continue
 
-        # 计算目标大小：最近的 x 的幂
+        # Calculate target size: nearest power of x
         # defensive: if len(res_set) == 1, math.log ok
         target_size = x ** math.ceil(math.log(max(1, len(res_set)), x))
         padded = set(res_set)
@@ -622,11 +621,11 @@ def pad_results_to_multiple_of_x(
     bogus_map: Dict[str, Tuple[float,float]]
 ) -> Tuple[List[Set], Dict[str, Tuple[float,float]], Dict]:
     """
-    对每个查询结果集合做 padding:
-    - target size = ceil(len(res)/x) * x (即 pad 到 x 的倍数)
-    - 只从 bogus_map 中坐标落在该 query range 的假点中选（优先）
-    - 允许同一个 fake token 在不同 query 之间重复使用
-    返回:
+    Pad each query result set:
+    - target size = ceil(len(res)/x) * x (i.e., pad to multiple of x)
+    - Only select from fake points in bogus_map whose coordinates fall within query range (priority)
+    - Allow same fake token to be reused across different queries
+    Returns:
       padded_results, used_bogus_map, metrics_dict
     """
     padded_results: List[Set] = []
@@ -646,7 +645,7 @@ def pad_results_to_multiple_of_x(
             padded_sizes.append(0)
             continue
 
-        # 目标大小：向上取整到 x 的倍数
+        # Target size: round up to multiple of x
         target_size = math.ceil(len(res_set) / x) * x
         padded = set(res_set)
 
@@ -734,7 +733,7 @@ using canonical ranges to cover each query, and return union of responses
 
 def generate_canonical_ranges(N0, N1):
     """
-    生成 2D canonical ranges (power-of-2 尺寸的矩形)
+    Generate 2D canonical ranges (power-of-2 sized rectangles)
     """
     canonical_ranges = []
     lengths0 = [2**k for k in range(int(math.ceil(math.log2(N0)))+1)]
@@ -752,7 +751,7 @@ def generate_canonical_ranges(N0, N1):
 
 def precompute_canonical_responses(canonical_ranges, points, map_points_to_coordinates):
     """
-    预计算每个 canonical range 覆盖的点集
+    Precompute point sets covered by each canonical range
     """
     precomputed = {}
     for rect in canonical_ranges:
@@ -768,7 +767,7 @@ def precompute_canonical_responses(canonical_ranges, points, map_points_to_coord
 
 def find_covering_canonical_range(canonical_ranges, query):
     """
-    找到最小的 canonical range 覆盖 query
+    Find smallest canonical range covering query
     """
     qmin0, qmax0, qmin1, qmax1 = query
     candidates = []
@@ -786,10 +785,10 @@ def response_hiding_with_bandwidth(
     queries, canonical_ranges, precomputed_responses, map_points_to_coordinates
 ):
     """
-    批量处理一组 queries：
-    - 对每个 query 找到最小的覆盖 canonical range
-    - 返回 superset (服务器返回) + true set (客户端过滤)
-    - 计算带宽开销统计
+    Batch process a set of queries:
+    - For each query find smallest covering canonical range
+    - Return superset (server returns) + true set (client filters)
+    - Calculate bandwidth overhead statistics
     """
     supersets = []
     true_sets = []
@@ -804,19 +803,19 @@ def response_hiding_with_bandwidth(
             continue
         seen_ranges.add(q)
 
-        # 服务器端：找到覆盖 canonical range
+        # Server side: find covering canonical ran
         covering = find_covering_canonical_range(canonical_ranges, q)
         superset = precomputed_responses[covering]
         supersets.append(superset)
 
-        # 客户端：过滤
+        # Client side: filter
         true_resp, _ = get_actual_query_resps_after_sampling(
             [q], list(superset), map_points_to_coordinates
         )
         true_set = true_resp[0]
         true_sets.append(true_set)
 
-        # 带宽统计
+        # Bandwidth statistics
         true_size = len(true_set)
         sup_size = len(superset)
         true_sizes.append(true_size)
@@ -825,7 +824,7 @@ def response_hiding_with_bandwidth(
         if true_size > 0:
             ratios.append(sup_size / true_size)
         else:
-            # 空查询时，ratio 定义为 1
+            # For empty queries, ratio defined as 1
             ratios.append(1.0)
 
     stats = {

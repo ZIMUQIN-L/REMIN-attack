@@ -108,12 +108,12 @@ def get_random_database_with_outlier(N0, N1, max_points, plaintext=False):
     points = []
     ori_points = []
 
-    # 生成主要点集（集中在某个区域，比如中间）
-    main_range = (N0 // 4, 3 * N0 // 4, N1 // 4, 3 * N1 // 4)  # 主要点集的范围
+    # Generate main point set (concentrated in a certain area, e.g., center)
+    main_range = (N0 // 4, 3 * N0 // 4, N1 // 4, 3 * N1 // 4)  # Range of main point set
 
     for i in range(main_range[0], main_range[1]):
         for j in range(main_range[2], main_range[3]):
-            if random.randrange(100) < 60:  # 30% 的概率跳过
+            if random.randrange(100) < 60:  # x% probability to skip
                 continue
             repeats = int(1 + (max_points - 1) * random.random())
             for num in range(repeats):
@@ -125,8 +125,8 @@ def get_random_database_with_outlier(N0, N1, max_points, plaintext=False):
                 points.append(search_token)
                 ori_points.append((i, j))
 
-    # 添加一个离群点（远离主要点集）
-    outlier_i = random.choice([0, N0 - 1])  # 离群点在左上角或右下角
+    # Add an outlier point (far from main point set)
+    outlier_i = random.choice([0, N0 - 1])  # Outlier at top-left or bottom-right corner
     outlier_j = random.choice([0, N1 - 1])
     if plaintext:
         outlier_token = (outlier_i, outlier_j)

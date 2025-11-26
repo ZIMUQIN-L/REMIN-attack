@@ -31,7 +31,7 @@ def probabilistic_snap(coords, grid_shape):
     prob_x = fractional[:, 0]
     prob_y = fractional[:, 1]
 
-    # 按概率决定取整方向
+    # decide direction of snapping based on probability
     snapped_x = np.where(
         np.random.rand(len(coords)) < prob_x,
         np.ceil(coords[:, 0]),

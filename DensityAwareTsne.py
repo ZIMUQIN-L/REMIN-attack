@@ -12,170 +12,93 @@ from sklearn.neighbors import KernelDensity
 
 MACHINE_EPSILON = np.finfo(np.double).eps
 
-'''
-note: 0.0001是一个还不错的参数？
-'''
 
 def _density_aware_loss(params, P, degrees_of_freedom, n_samples,
                        n_components, densities, lambda_=0.00045,
                        bandwidth=2.0, skip_num_points=0, compute_error=True, iter=0):
     """
-    带密度约束的t-SNE损失函数
+    t-SNE loss function with density constraints
 
-    参数：
-        params: 展平的嵌入坐标 (n_samples * n_components,)
-        P: 高维相似度矩阵
-        densities: 预先计算的密度数组 (n_samples,)
-        lambda_: 密度正则强度
-        bandwidth: 核密度估计带宽
+    Parameters:
+        params: Flattened embedding coordinates (n_samples * n_components,)
+        P: High-dimensional similarity matrix
+        densities: Precomputed density array (n_samples,)
+        lambda_: Density regularization strength
+        bandwidth: Kernel density estimation bandwidth
     """
     X_embedded = params.reshape(n_samples, n_components)
 
-    # 1. 计算原始KL散度和梯度
+    # 1. Calculate original KL divergence and gradient
     kl_divergence, grad = _loss_function(
         params, P, degrees_of_freedom, n_samples, n_components,
         compute_error=compute_error, skip_num_points=0
     )
 
-    # 2. 计算密度约束项
+    # 2. Calculate density constraint term
     if lambda_ > 0 and iter >= 150 and iter % 10 == 0:
-        # 核密度估计
-        # X_embedded_norm = (X_embedded - X_embedded.mean(0)) / X_embedded.std(0)
-        # kde = KernelDensity(bandwidth=bandwidth).fit(X_embedded_norm)
-        #
-        # log_dens = kde.score_samples(X_embedded_norm)
-        # computed_densities = np.exp(log_dens)
-        # computed_densities = (computed_densities - computed_densities.min()) / (computed_densities.max() - computed_densities.min() + 1e-8)
 
         '''
-        方法1：密度梯度计算（循环）
-        '''
-        # # 计算密度梯度
-        # grad_dens = np.zeros_like(X_embedded)
-        # dist_matrix = squareform(pdist(X_embedded))
-        # kernel_vals = np.exp(-0.5 * (dist_matrix / bandwidth) ** 2)
-        #
-        # for i in range(n_samples):
-        #     # 核密度梯度分量
-        #     grad_kernel = (X_embedded[i] - X_embedded) * kernel_vals[i][:, None]
-        #     grad_dens[i] = 2 * (densities[i] - computed_densities[i]) * \
-        #                    np.sum(grad_kernel, axis=0) / (bandwidth ** 2)
-
-        ''' 
-        方法2：密度梯度计算（向量化）'''
-        # # 密度梯度计算（向量化）
-        # diff = X_embedded[:, np.newaxis, :] - X_embedded[np.newaxis, :, :]  # (n,n,2)
-        # dist_sq = np.sum(diff ** 2, axis=-1)  # (n,n)
-        # kernel_vals = np.exp(-0.5 * dist_sq / (bandwidth ** 2))  # (n,n)
-        #
-        # # 计算梯度系数
-        # coeff = 2 * (densities - computed_densities) / (bandwidth ** 2)  # (n,)
-        #
-        # # 向量化梯度计算（等效于原循环）
-        # grad_dens = np.einsum('i,ij,ijk->ik', coeff, kernel_vals, diff)  # (n,2)
-
-        '''
-        方法3：spearman'''
-        # X_norm = (X_embedded - X_embedded.mean(0)) / (X_embedded.std(0) + 1e-8)
-        #
-        # # 核密度估计（相同参数）
-        # kde = KernelDensity(bandwidth=bandwidth, kernel='gaussian')
-        # kde.fit(X_norm)
-        # log_dens = kde.score_samples(X_norm)
-        # lowdim_density = np.exp(log_dens)
-        #
-        # # 同款归一化方式
-        # lowdim_density = (lowdim_density - lowdim_density.min()) / \
-        #                  (lowdim_density.max() - lowdim_density.min() + 1e-8)
-        # highdim_density = (densities - densities.min()) / \
-        #                   (densities.max() - densities.min() + 1e-8)
-        #
-        # # 计算Spearman排名损失
-        # highdim_rank = np.argsort(highdim_density)
-        # lowdim_rank = np.argsort(lowdim_density)
-        #
-        # # 安全的Spearman计算
-        # with np.errstate(invalid='ignore'):
-        #     rank_corr = np.corrcoef(highdim_rank, lowdim_rank)[0, 1]
-        # rank_loss = -np.nan_to_num(rank_corr, nan=0.0)  # 目标是最小化负相关
-        #
-        # # 梯度计算：推动点向同排名邻居移动
-        # grad_dens = np.zeros_like(X_embedded)
-        # dist_matrix = np.sqrt(np.sum((X_norm[:, None] - X_norm) ** 2, axis=-1))
-        # np.fill_diagonal(dist_matrix, np.inf)  # 忽略自身
-        #
-        # for i in range(n_samples):
-        #     # 找到排名最接近的k个点（非空间最近邻）
-        #     rank_diff = np.abs(lowdim_rank - highdim_rank[i])
-        #     closest = np.argpartition(rank_diff, min(30, n_samples - 1))[:min(30, n_samples - 1)]
-        #
-        #     for j in closest:
-        #         dx = X_embedded[j] - X_embedded[i]
-        #         step = (highdim_rank[i] - lowdim_rank[i]) * dx
-        #         grad_dens[i] += step / (np.linalg.norm(step) + 1e-12)  # 稳定化
-
-        '''
-        方法4：spearman'''
+        Method 4: Spearman '''
         X_norm = (X_embedded - X_embedded.mean(0)) / (X_embedded.std(0) + 1e-8)
 
-        # 核密度估计（相同参数）
+        # Kernel density estimation (same parameters)
         kde = KernelDensity(bandwidth=bandwidth, kernel='cosine')
         kde.fit(X_norm)
         log_dens = kde.score_samples(X_norm)
         lowdim_density = np.exp(log_dens)
 
-        # 同款归一化方式
+        # Same normalization method
         lowdim_density = (lowdim_density - lowdim_density.min()) / \
                          (lowdim_density.max() - lowdim_density.min() + 1e-8)
         highdim_density = (densities - densities.min()) / \
                           (densities.max() - densities.min() + 1e-8)
 
-        # 计算Spearman排名损失
+        # Calculate Spearman rank loss
         highdim_rank = np.argsort(highdim_density)
         lowdim_rank = np.argsort(lowdim_density)
 
-        # 安全的Spearman计算
+        # Safe Spearman calculation
         with np.errstate(invalid='ignore'):
             rank_corr = np.corrcoef(highdim_rank, lowdim_rank)[0, 1]
-        rank_loss = -np.nan_to_num(rank_corr, nan=0.0)  # 目标是最小化负相关
+        rank_loss = -np.nan_to_num(rank_corr, nan=0.0)  # Goal is to minimize negative correlation
 
-        # 向量化梯度计算
+        # Vectorized gradient calculation
         n_samples = X_embedded.shape[0]
         k_neighbors = min(30, n_samples - 1)
 
-        # 计算所有点的排名差异矩阵
+        # Calculate rank difference matrix for all points
         rank_diff = np.abs(lowdim_rank[:, None] - highdim_rank[None, :])
 
-        # 找到每个点的k个排名最接近的点
+        # Find k nearest points by rank for each point
         closest_indices = np.argpartition(rank_diff, k_neighbors, axis=1)[:, :k_neighbors]
 
-        # 准备所有点的位置差异
+        # Prepare position differences for all points
         X_expanded = X_embedded[:, None, :]  # shape: (n_samples, 1, dim)
         X_broadcast = X_embedded[None, :, :]  # shape: (1, n_samples, dim)
         dX = X_broadcast - X_expanded  # shape: (n_samples, n_samples, dim)
 
-        # 使用高级索引获取相关差异
+        # Get relevant differences using advanced indexing
         selected_dX = dX[np.arange(n_samples)[:, None], closest_indices]  # shape: (n_samples, k_neighbors, dim)
 
-        # 计算排名差异权重
+        # Calculate rank difference weights
         rank_diffs = (highdim_rank[None, :] - lowdim_rank[:, None])[np.arange(n_samples)[:, None], closest_indices]
 
-        # 计算梯度步长
+        # Calculate gradient steps
         steps = rank_diffs[:, :, None] * selected_dX  # shape: (n_samples, k_neighbors, dim)
         norm_steps = np.linalg.norm(steps, axis=2, keepdims=True) + 1e-12
         normalized_steps = steps / norm_steps
 
-        # 聚合梯度
+        # Aggregate gradients
         grad_dens = np.sum(normalized_steps, axis=1)
 
-        # 合并梯度（注意逆标准化）
+        # Merge gradients (note inverse normalization)
         std = X_embedded.std(0) + 1e-8
         grad_dens = grad_dens / std
 
-        # 合并梯度
+        # Combine gradients
         grad += lambda_ * grad_dens.ravel()
 
-        # 计算总损失
+        # Calculate total loss
         if compute_error:
             # kl_divergence += lambda_ * np.sum((densities - computed_densities) ** 2)
             kl_divergence += lambda_ * rank_loss
@@ -316,8 +239,8 @@ def _gradient_descent(objective, p0, it, n_iter,
 class DensityAwareTSNE(TSNE):
     def __init__(self, densities=None, alpha=0.5, lambda_=0.2, init=None, **kwargs):
         self.densities = densities
-        self.alpha = alpha  # 密度权重系数
-        self.lambda_ = lambda_  # 密度正则强度
+        self.alpha = alpha  # Density Weighting Coefficient
+        self.lambda_ = lambda_  # Density Regular Strength
         super().__init__(**kwargs)
         self.init = init
 
@@ -401,30 +324,14 @@ class DensityAwareTSNE(TSNE):
         self.embedding_ = embedding
         return self.embedding_
 
-        # print("Custom _fit() is being called!")
-        # if self.densities is None:
-        #     kde = KernelDensity(bandwidth=0.3).fit(X)
-        #     self.densities = np.exp(kde.score_samples(X))
-        #     self.densities = (self.densities - self.densities.min()) / \
-        #                      (self.densities.max() - self.densities.min() + 1e-8)
-        #
-        # # 运行标准t-SNE流程
-        # embedding = super()._fit(X)
-        #
-        # # 添加密度正则项
-        # if self.lambda_ > 0:
-        #     self._apply_density_constraint(embedding)
-        #
-        # return embedding
-
     def _apply_density_constraint(self, embedding):
-        # 计算嵌入空间密度
+        # Calculate Embedding Space Density
         kde = KernelDensity(bandwidth=0.3).fit(embedding)
         reco_densities = np.exp(kde.score_samples(embedding))
 
-        # 密度匹配梯度
+        # Density-Matching Gradient
         grad = 2 * self.lambda_ * (reco_densities - self.densities)[:, None] * \
                (embedding - np.mean(embedding, axis=0))
 
-        # 更新嵌入结果
-        embedding -= 0.01 * grad  # 学习率可调
+        # Update embedded results
+        embedding -= 0.01 * grad  # adjust learning rate

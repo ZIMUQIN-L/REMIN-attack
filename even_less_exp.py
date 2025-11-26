@@ -38,14 +38,6 @@ class EvenLessExpRunner:
     def run_ori(self, dim=2):
         start = time.time()
         G, used = range_attack.general(self.new_responses)
-        # if "nh" in self.points or "crg" in self.points:
-        #     dim = 3
-        #     pos = nx.kamada_kawai_layout(G, dim=dim)
-        #     self.original_result = pos
-        # else:
-        #     dim = 2
-        #     pos = nx.kamada_kawai_layout(G, dim=dim)
-        #     self.original_result = pos
         pos = nx.kamada_kawai_layout(G, dim=dim)
         self.original_result = pos
         end = time.time()
@@ -53,20 +45,20 @@ class EvenLessExpRunner:
         return self.original_result
 
     def align_coords(self, grid_size):
-        # 显示原始布局并等待用户手动对齐
+        # Display original layout and wait for user manual alignment
         print("\nPlease manually align the points in the figure.")
         print("Click and drag points to adjust their positions.")
         print("Press Enter when done.")
-        
-        # 使用plot_result的交互功能
+
+        # Use plot_result's interactive functionality
         self.plot_result(self.processed_result)
         
-        # 获取当前图形中的点位置
+        # Get point positions from current figure
         fig = plt.gcf()
         ax = fig.gca()
         aligned_points = []
         
-        # 获取scatter plot中的点
+        # Get points from scatter plot
         for collection in ax.collections:
             if isinstance(collection, plt.matplotlib.collections.PathCollection):
                 offsets = collection.get_offsets()
@@ -79,11 +71,11 @@ class EvenLessExpRunner:
             print("Warning: No points were captured. Using original points.")
             aligned_points = self.processed_result
         
-        # 对对齐后的点进行自动缩放
+        # Automatically scale the aligned points
         from align import robust_scale_coords
         self.aligned_result = robust_scale_coords(aligned_points, [1, grid_size[0] - 1], [1, grid_size[1] - 1])
         
-        # 显示缩放后的结果
+        # Display scaled result
         print("Scaled layout:")
         self.plot_result(self.aligned_result)
         plt.show()
@@ -145,26 +137,25 @@ class EvenLessExpRunner:
             plt.ylabel('Y-axis')
             plt.grid(True)
             
-            # 添加交互式调整功能
+            # Add interactive adjustment functionality
             def on_key(event):
-                nonlocal coords  # 声明coords为非局部变量
+                nonlocal coords  # Declare coords as non-local variable
                 if event.key == 'enter':
                     plt.close()
-                elif event.key == 'r':  # 按r键旋转
-                    # 获取当前图形的中心点
+                elif event.key == 'r':  # Press 'r' to rotate
+                    # Get center of current plot
                     center = np.mean(coords, axis=0)
-                    # 旋转1度
+                    # Rotate by 1 degree
                     angle = np.pi/180
                     rotation_matrix = np.array([[np.cos(angle), -np.sin(angle)],
                                               [np.sin(angle), np.cos(angle)]])
-                    # 将点移动到原点，旋转，再移回
+                    # Move points to origin, rotate, then move back
                     coords_centered = coords - center
                     coords_rotated = np.dot(coords_centered, rotation_matrix)
                     coords = coords_rotated + center
                     scatter.set_offsets(coords)
                     plt.draw()
-            
-            # 绑定事件
+
             fig = plt.gcf()
             fig.canvas.mpl_connect('key_press_event', on_key)
             

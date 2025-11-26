@@ -22,7 +22,7 @@ def logarithmic(freq_table: Dict[Tuple[str, str], int]) -> Dict[Tuple[str, str],
 
 
 def jaccard(freq_table: Dict[Tuple[str, str], int], total_responses: Dict[str, int]) -> Dict[Tuple[str, str], float]:
-    """Jaccard距离"""
+    """Jaccard distance"""
     distance = {}
     for (a, b), freq in freq_table.items():
         jaccard_sim = freq / (total_responses[a] + total_responses[b] - freq)

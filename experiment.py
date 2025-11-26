@@ -13,7 +13,7 @@ import range_attack
 
 class ExperimentRunner:
     def __init__(self, points, map_to_original, responses):
-        # 确保 points 和 map_to_original 的键类型一致
+        # Ensure points and map_to_original have consistent key types
         self.points = points
         self.responses = responses
         self.dist_matrix = None
@@ -37,7 +37,7 @@ class ExperimentRunner:
         self.true_var = var
 
     def evaluate_reconstruction(self, reconstructed_coords, method_name=''):
-        """评估重建效果"""
+        """Evaluate reconstruction quality"""
         # print(reconstructed_coords)
         return self.metrics.evaluate(reconstructed_coords)
 
@@ -46,7 +46,7 @@ class ExperimentRunner:
         distance_matrix = np.full((size, size), np.inf)
 
         for (id1, id2), distance in distance_table.items():
-            # 确保 id1 和 id2 的类型与 points 一致
+            # Ensure id1 and id2 types are consistent with points
             i, j = self.point_to_index[id1], self.point_to_index[id2]
             distance_matrix[i][j] = distance
             distance_matrix[j][i] = distance  # Symmetric
@@ -58,20 +58,20 @@ class ExperimentRunner:
 
     def get_geometric_density(self, pos, bandwidth=2.0):
         """
-        基于Kamada-Kawai布局坐标的空间密度估计
-        :param pos: (n_points, 2) 拓扑初始化坐标
-        :param bandwidth: 带宽选择策略
-        :return: 归一化的密度数组 (n_points,)
+        Spatial density estimation based on Kamada-Kawai layout coordinates
+        :param pos: (n_points, 2) topological initialization coordinates
+        :param bandwidth: bandwidth selection strategy
+        :return: Normalized density array (n_points,)
         """
 
-        # 标准化坐标
+        # Normalize coordinates
         pos_norm = (pos - pos.mean(0)) / pos.std(0)
 
-        # 二维核密度估计
+        # 2D kernel density estimation
         kde = KernelDensity(bandwidth=bandwidth, kernel='cosine')
         kde.fit(pos_norm)
 
-        # 计算对数密度并归一化到[0,1]
+        # Calculate log density and normalize to [0,1]
         log_dens = kde.score_samples(pos_norm)
         densities = np.exp(log_dens)
         return (densities - densities.min()) / (densities.max() - densities.min() + 1e-8)
@@ -83,33 +83,33 @@ class ExperimentRunner:
 
     def build_graph_from_responses(self):
         """
-        从 response set 生成图邻接矩阵，并构造 networkx Graph
-        :param response_set: List[List[int]] - 每个查询的返回点集合
-        :param num_points: int - 数据库点的数量
+        Generate graph adjacency matrix from response set and construct networkx Graph
+        :param response_set: List[List[int]] - returned point sets for each query
+        :param num_points: int - number of database points
         :return: networkx Graph
         """
         G = nx.Graph()
 
-        # 遍历所有 size=2 response 构造边
+        # Iterate through all size=2 responses to construct edges
         response_set = augment_responses(self.responses)
         for (i, j) in response_set:
             G.add_edge(i, j)
         pos = nx.kamada_kawai_layout(G, dim=2)
 
-        # 修改这里：使用point_to_index来正确映射位置
+        # use point_to_index to correctly map positions
         pos_array = np.zeros((len(self.points), 2))
         for point_id, coord in pos.items():
             if point_id in self.point_to_index:
                 pos_array[self.point_to_index[point_id]] = coord
 
-        # 基于几何位置的密度估计
+        # Density estimation based on geometric positions
         densities = self.get_geometric_density(pos_array)
 
         self.plot_graph_layout(pos)
 
-        full_pos = np.zeros((len(self.points), 2))  # 默认填充 (0,0)
+        full_pos = np.zeros((len(self.points), 2))  # Default fill with (0,0)
         for point_id, coord in pos.items():
-            full_pos[self.point_to_index[point_id]] = coord  # 只填充有连接的点
+            full_pos[self.point_to_index[point_id]] = coord  # Only fill connected points
 
         self.plot_density_heatmap(full_pos, densities)
         self.full_pos = full_pos
@@ -119,16 +119,16 @@ class ExperimentRunner:
 
 
     def classic_run(self, responses, distance_config, reduction_config):
-        """执行实验并返回结果"""
-        # 计算频率表
+        """Execute experiment and return results"""
+        # Calculate frequency table
         freq_table = self.build_frequency_table(responses)
         total_responses = self.count_total_responses(responses)
 
 
-        # 执行所有组合
+        # Execute all combinations
         results = {}
         for (dist_name, dist_params), (red_name, red_params) in itertools.product(distance_config, reduction_config):
-            # 计算距离
+            # Calculate distance
             if dist_name == 'jaccard':
                 dist_table = jaccard(freq_table, total_responses)
             elif dist_name == 'log':
@@ -141,10 +141,10 @@ class ExperimentRunner:
                 dist_table = cooccurrence_euclidean(freq_table, total_responses)
             else:
                 dist_table = origin_reciprocal(freq_table)
-            # 构建矩阵
+            # Build matrix
             dist_matrix = self.distance_matrix_from_table(dist_table)
 
-            # 降维
+            # Dimensionality reduction
             if red_name == 'tsne':
                 coords = tsne(dist_matrix, **red_params)
             elif red_name == 'topo_tsne':
@@ -174,7 +174,7 @@ class ExperimentRunner:
             else:
                 return
 
-            # 存储结果
+            # Store results
             key = f"{dist_name} + {dist_params} + {red_name} + {red_params}"
             # key = f"{dist_name} distance with {red_name}"
             # key = f"{red_params}"
@@ -199,7 +199,7 @@ class ExperimentRunner:
 
 
     def plot_results(self, results):
-        """可视化所有结果"""
+        """Visualize all results"""
         n = len(results)
         n_cols = 3
         n_rows = int(np.ceil(n / n_cols))
@@ -223,7 +223,7 @@ class ExperimentRunner:
         return frequency_table
 
     def count_total_responses(self, responses):
-        """统计每个点的总出现次数（修复类型问题）"""
+        """Count total occurrences for each point (fix type issues)"""
         frequency_table = {}
         for response in responses:
             for id in response:
