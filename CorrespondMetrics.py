@@ -282,50 +282,52 @@ class CorrespondMetrics:
 
     def _mse_hungarian(self, reconstructed):
         """
-        使用匈牙利算法计算两个点集之间的 MSE。
+        Calculate MSE between two point sets using Hungarian algorithm.
 
-        参数:
-        - A: (n, d) 形状的 NumPy 数组，表示 n 个 d 维点
-        - B: (n, d) 形状的 NumPy 数组，表示 n 个 d 维点
+        Parameters:
+        - A: (n, d) NumPy array representing n d-dimensional points
+        - B: (n, d) NumPy array representing n d-dimensional points
 
-        返回:
-        - mse_value: 计算得到的 MSE 值
+        Returns:
+        - mse_value: calculated MSE value
         """
-        cost_matrix = cdist(self.original_coords, reconstructed) ** 2  # 计算欧几里得距离的平方
-        row_ind, col_ind = linear_sum_assignment(cost_matrix)  # 匈牙利算法求最优匹配
-        return np.mean(cost_matrix[row_ind, col_ind])  # 计算 MSE
+        cost_matrix = cdist(self.original_coords, reconstructed) ** 2
+        row_ind, col_ind = linear_sum_assignment(cost_matrix)
+        return np.mean(cost_matrix[row_ind, col_ind])
 
     def _mse_nearest_neighbor(self, reconstructed):
         """
+        Calculate MSE using nearest neighbor matching
         """
-        kd_tree = cKDTree(reconstructed)  # 在 B 上构建 KD-Tree
-        distances, _ = kd_tree.query(self.original_coords)  # 查询 A 中每个点到 B 的最近邻距离
-        return np.mean(distances ** 2)  # 计算 MSE
+        kd_tree = cKDTree(reconstructed)  # Build KD-Tree on B
+        distances, _ = kd_tree.query(self.original_coords)  # Query nearest neighbor distance for each point in A
+        return np.mean(distances ** 2)  # Calculate MSE
 
     def _calc_mse(self, reconstructed):
-        """均方误差"""
+        """Mean squared error"""
         return np.mean(np.sum((self.original_coords - reconstructed) ** 2, axis=1))
 
     def _calc_exact_match(self, reconstructed):
-        """完全匹配率"""
+        """Exact match rate"""
         rounded = np.round(reconstructed)
         return np.mean(np.all(rounded == self.original_coords, axis=1))
 
     def _calc_exact_match_nearest(self, reconstructed):
-        """使用最近邻匹配计算完全匹配率"""
-        kd_tree = cKDTree(self.original_coords)  # 在 original_coords 上构建 KD-Tree
-        distances, _ = kd_tree.query(reconstructed)  # 查询 reconstructed 每个点的最近邻
-        return np.mean(distances == 0)  # 统计完全匹配的比例
+        """Calculate exact match rate using nearest neighbor matching"""
+        kd_tree = cKDTree(self.original_coords)  # Build KD-Tree on original_coords
+        distances, _ = kd_tree.query(reconstructed)  # Query nearest neighbor for each reconstructed point
+        return np.mean(distances == 0)  # Count exact match proportion
 
     def _calc_neighbor_accuracy(self, reconstructed, k=5):
-        """最近邻准确率"""
+        """Nearest neighbor accuracy"""
         nn_original = NearestNeighbors(n_neighbors=k).fit(self.original_coords)
         indices_original = nn_original.kneighbors(return_distance=False)
 
         nn_reconstructed = NearestNeighbors(n_neighbors=k).fit(reconstructed)
         indices_reconstructed = nn_reconstructed.kneighbors(return_distance=False)
+
         overlap = 0
         for i in range(len(self.original_coords)):
-            if i < len(indices_reconstructed):  # 确保索引在范围内
+            if i < len(indices_reconstructed):  # Ensure index is within range
                 overlap += len(np.intersect1d(indices_original[i], indices_reconstructed[i]))
         return overlap / (k * len(self.original_coords))
